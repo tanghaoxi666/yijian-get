@@ -7,7 +7,10 @@
     "start": "node server.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0"
   },
   "license": "MIT"
 }

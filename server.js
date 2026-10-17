@@ -46,11 +46,17 @@ const QQ = {
 };
 
 /* ============================================================
-   启动时种子数据
+   启动时种子数据（异步，Turso）
    ============================================================ */
-db.seedApplianceCodes(SEED_APPLIANCE_CODES);
-db.seedTools(buildTools());
-console.log('[seed] 家电报错码 & 工具库已就绪');
+(async () => {
+  try {
+    await db.seedApplianceCodes(SEED_APPLIANCE_CODES);
+    await db.seedTools(buildTools());
+    console.log('[seed] 家电报错码 & 工具库已就绪');
+  } catch (e) {
+    console.error('[seed] 种子数据失败:', e.message);
+  }
+})();
 
 /* ============================================================
    MIME 类型
@@ -103,7 +109,7 @@ function getTokenFromCookie(req) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-function authUser(req) {
+async function authUser(req) {
   const token = getTokenFromCookie(req);
   if (!token) return null;
   return db.getUserByToken(token);
@@ -164,20 +170,20 @@ async function handleWechatCallback(req, res, query) {
     const userInfo = JSON.parse(userRes);
 
     // 3. 查找或创建用户
-    let user = db.getUserByOpenid('wechat', openid);
+    let user = await db.getUserByOpenid('wechat', openid);
     if (!user) {
-      user = db.createUser({
+      user = await db.createUser({
         username: userInfo.nickname || ('wx_' + openid.slice(-8)),
         nickname: userInfo.nickname,
         avatar: userInfo.headimgurl,
         openidWechat: openid,
       });
     } else {
-      user = db.updateUser(user.id, { nickname: userInfo.nickname, avatar: userInfo.headimgurl });
+      user = await db.updateUser(user.id, { nickname: userInfo.nickname, avatar: userInfo.headimgurl });
     }
 
     // 4. 创建会话并跳转
-    const token = db.createSession(user.id);
+    const token = await db.createSession(user.id);
     setSessionCookie(res, token);
     redirect(res, '/index.html');
   } catch (err) {
@@ -218,20 +224,20 @@ async function handleQqCallback(req, res, query) {
     const info = JSON.parse(infoRes);
 
     // 4. 查找或创建用户
-    let user = db.getUserByOpenid('qq', openid);
+    let user = await db.getUserByOpenid('qq', openid);
     if (!user) {
-      user = db.createUser({
+      user = await db.createUser({
         username: info.nickname || ('qq_' + openid.slice(-8)),
         nickname: info.nickname,
         avatar: info.figureurl_qq_2 || info.figureurl_qq_1,
         openidQq: openid,
       });
     } else {
-      user = db.updateUser(user.id, { nickname: info.nickname, avatar: info.figureurl_qq_2 || info.figureurl_qq_1 });
+      user = await db.updateUser(user.id, { nickname: info.nickname, avatar: info.figureurl_qq_2 || info.figureurl_qq_1 });
     }
 
     // 5. 创建会话并跳转
-    const token = db.createSession(user.id);
+    const token = await db.createSession(user.id);
     setSessionCookie(res, token);
     redirect(res, '/index.html');
   } catch (err) {
@@ -267,41 +273,41 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/auth/register' && req.method === 'POST') {
         const { username, email, password } = await parseBody(req);
         if (!username || !password) return sendJSON(res, { ok: false, msg: '用户名和密码必填' }, 400);
-        const result = db.createUser({ username, email, password });
-        const token = db.createSession(result.id);
+        const result = await db.createUser({ username, email, password });
+        const token = await db.createSession(result.id);
         setSessionCookie(res, token);
         return sendJSON(res, { ok: true, user: result });
       }
 
       if (pathname === '/api/auth/login' && req.method === 'POST') {
         const { account, password } = await parseBody(req);
-        const u = db.getUserByUsername(account);
+        const u = await db.getUserByUsername(account);
         if (!u || !u.passwordHash || !db.verifyPassword(password, u.passwordHash, u.passwordSalt)) {
           return sendJSON(res, { ok: false, msg: '账号或密码错误' }, 401);
         }
-        const token = db.createSession(u.id);
+        const token = await db.createSession(u.id);
         setSessionCookie(res, token);
         return sendJSON(res, { ok: true, user: { id: u.id, username: u.username, email: u.email, isPro: u.isPro, nickname: u.nickname, avatar: u.avatar } });
       }
 
       if (pathname === '/api/auth/logout' && req.method === 'POST') {
-        db.deleteSession(getTokenFromCookie(req));
+        await db.deleteSession(getTokenFromCookie(req));
         clearSessionCookie(res);
         return sendJSON(res, { ok: true });
       }
 
       if (pathname === '/api/auth/me' && req.method === 'GET') {
-        const user = authUser(req);
+        const user = await authUser(req);
         if (!user) return sendJSON(res, { ok: false, msg: '未登录' }, 401);
-        const quotas = db.getQuotas(user.id);
+        const quotas = await db.getQuotas(user.id);
         return sendJSON(res, { ok: true, user, quotas });
       }
 
       // ---- 升级会员 ----
       if (pathname === '/api/user/upgrade' && req.method === 'POST') {
-        const user = authUser(req);
+        const user = await authUser(req);
         if (!user) return sendJSON(res, { ok: false, msg: '请先登录' }, 401);
-        const updated = db.updateUser(user.id, { isPro: true });
+        const updated = await db.updateUser(user.id, { isPro: true });
         return sendJSON(res, { ok: true, user: updated });
       }
 
@@ -329,16 +335,16 @@ const server = http.createServer(async (req, res) => {
 
       // ---- 配额 ----
       if (pathname === '/api/quotas' && req.method === 'GET') {
-        const user = authUser(req);
+        const user = await authUser(req);
         if (!user) return sendJSON(res, { ok: false, msg: '未登录' }, 401);
-        return sendJSON(res, { ok: true, quotas: db.getQuotas(user.id) });
+        return sendJSON(res, { ok: true, quotas: await db.getQuotas(user.id) });
       }
       if (pathname === '/api/quotas/use' && req.method === 'POST') {
-        const user = authUser(req);
+        const user = await authUser(req);
         if (!user) return sendJSON(res, { ok: false, msg: '请先登录' }, 401);
         const { type } = await parseBody(req);
-        const result = db.useQuota(user.id, type);
-        result.quotas = db.getQuotas(user.id);
+        const result = await db.useQuota(user.id, type);
+        result.quotas = await db.getQuotas(user.id);
         return sendJSON(res, result);
       }
 
@@ -346,18 +352,18 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/appliance' && req.method === 'GET') {
         const keyword = query.keyword || '';
         const type = query.type || 'all';
-        return sendJSON(res, { ok: true, data: db.searchApplianceCodes(keyword, type) });
+        return sendJSON(res, { ok: true, data: await db.searchApplianceCodes(keyword, type) });
       }
 
       // ---- 工具 ----
       if (pathname === '/api/tools' && req.method === 'GET') {
         const category = query.category || 'all';
         const keyword = query.keyword || '';
-        return sendJSON(res, { ok: true, data: db.getTools(category, keyword) });
+        return sendJSON(res, { ok: true, data: await db.getTools(category, keyword) });
       }
       if (pathname.startsWith('/api/tools/') && req.method === 'GET') {
         const id = pathname.split('/').pop();
-        const tool = db.getToolById(id);
+        const tool = await db.getToolById(id);
         if (!tool) return sendJSON(res, { ok: false, msg: '工具不存在' }, 404);
         return sendJSON(res, { ok: true, data: tool });
       }

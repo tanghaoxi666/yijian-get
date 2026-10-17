@@ -1,25 +1,55 @@
 /**
- * 数据库层 — 基于 Node.js 内置 node:sqlite（零第三方依赖）
+ * 数据库层 — 基于 Turso（云端 SQLite，@libsql/client）
  * 持久化：用户、会话、配额、家电报错码、工具列表
  * 知识库文章为只读生成数据，由后端内存生成后通过 API 返回，不入库。
+ *
+ * 环境变量：
+ *   TURSO_DATABASE_URL  — Turso 数据库 URL（libsql://xxx.turso.io）
+ *   TURSO_AUTH_TOKEN     — Turso 认证 token
+ *   若未配置，则回退到本地 SQLite 文件（开发用）
  */
-const { DatabaseSync } = require('node:sqlite');
+const { createClient } = require('@libsql/client');
 const crypto = require('node:crypto');
 const path = require('node:path');
+const fs = require('node:fs');
 
-const DB_PATH = path.join(__dirname, 'data', 'app.db');
+const TURSO_URL = process.env.TURSO_DATABASE_URL;
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
 
-// 确保 data 目录存在
-try { require('node:fs').mkdirSync(path.join(__dirname, 'data'), { recursive: true }); } catch {}
+// 本地开发回退路径
+const LOCAL_DB_PATH = path.join(__dirname, 'data', 'app.db');
 
-const db = new DatabaseSync(DB_PATH);
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
+let client;
+if (TURSO_URL) {
+  client = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
+  console.log('[db] 使用 Turso 云端数据库:', TURSO_URL);
+} else {
+  // 本地回退：使用 libsql 的本地文件模式
+  try { fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true }); } catch {}
+  client = createClient({ url: `file:${LOCAL_DB_PATH}` });
+  console.log('[db] 使用本地 SQLite:', LOCAL_DB_PATH);
+}
+
+async function exec(sql) {
+  return client.execute(sql);
+}
+
+async function query(sql, args = []) {
+  const res = await client.execute({ sql, args });
+  return res.rows;
+}
+
+async function queryOne(sql, args = []) {
+  const rows = await query(sql, args);
+  return rows[0] || null;
+}
 
 /* ============================================================
    建表
    ============================================================ */
-db.exec(`
+(async () => {
+  try {
+    await exec(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE,
@@ -78,6 +108,12 @@ CREATE TABLE IF NOT EXISTS tools (
   hot INTEGER DEFAULT 0
 );
 `);
+    await exec('PRAGMA foreign_keys = ON;');
+    console.log('[db] 表结构已就绪');
+  } catch (e) {
+    console.error('[db] 建表失败:', e.message);
+  }
+})();
 
 /* ============================================================
    密码哈希（scrypt，Node 内置）
@@ -120,7 +156,7 @@ function rowToUser(row) {
 /* ============================================================
    用户
    ============================================================ */
-function createUser({ username, email, password, isPro = false, openidWechat, openidQq, nickname, avatar }) {
+async function createUser({ username, email, password, isPro = false, openidWechat, openidQq, nickname, avatar }) {
   const id = uid('u');
   let passwordHash = null, passwordSalt = null;
   if (password) {
@@ -128,35 +164,34 @@ function createUser({ username, email, password, isPro = false, openidWechat, op
     passwordHash = hash;
     passwordSalt = salt;
   }
-  db.prepare(`INSERT INTO users (id, username, email, password_hash, password_salt, is_pro, nickname, avatar, openid_wechat, openid_qq, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, username || null, email || null, passwordHash, passwordSalt, isPro ? 1 : 0,
+  await query(`INSERT INTO users (id, username, email, password_hash, password_salt, is_pro, nickname, avatar, openid_wechat, openid_qq, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, username || null, email || null, passwordHash, passwordSalt, isPro ? 1 : 0,
          nickname || username || null, avatar || null, openidWechat || null, openidQq || null,
-         new Date().toISOString());
+         new Date().toISOString()]);
   // 初始化配额
-  db.prepare(`INSERT INTO quotas (user_id, contract_audit, tools, appliance, knowledge, reset_month)
-              VALUES (?, 5, 15, 15, 15, ?)`)
-    .run(id, currentMonth());
+  await query(`INSERT INTO quotas (user_id, contract_audit, tools, appliance, knowledge, reset_month)
+              VALUES (?, 5, 15, 15, 15, ?)`, [id, currentMonth()]);
   return getUserById(id);
 }
 
-function getUserById(id) {
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+async function getUserById(id) {
+  const row = await queryOne('SELECT * FROM users WHERE id = ?', [id]);
   return rowToUser(row);
 }
 
-function getUserByUsername(username) {
-  const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+async function getUserByUsername(username) {
+  const row = await queryOne('SELECT * FROM users WHERE username = ?', [username]);
   return row ? { ...rowToUser(row), passwordHash: row.password_hash, passwordSalt: row.password_salt } : null;
 }
 
-function getUserByOpenid(provider, openid) {
+async function getUserByOpenid(provider, openid) {
   const col = provider === 'wechat' ? 'openid_wechat' : 'openid_qq';
-  const row = db.prepare(`SELECT * FROM users WHERE ${col} = ?`).get(openid);
+  const row = await queryOne(`SELECT * FROM users WHERE ${col} = ?`, [openid]);
   return rowToUser(row);
 }
 
-function updateUser(id, patch) {
+async function updateUser(id, patch) {
   const fields = [];
   const vals = [];
   if (patch.username !== undefined) { fields.push('username = ?'); vals.push(patch.username); }
@@ -168,104 +203,108 @@ function updateUser(id, patch) {
   if (patch.openidQq !== undefined) { fields.push('openid_qq = ?'); vals.push(patch.openidQq); }
   if (!fields.length) return getUserById(id);
   vals.push(id);
-  db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...vals);
+  await query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, vals);
   return getUserById(id);
 }
 
 /* ============================================================
    会话
    ============================================================ */
-function createSession(userId) {
+async function createSession(userId) {
   const token = crypto.randomBytes(32).toString('hex');
   const now = new Date();
-  const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 天
-  db.prepare(`INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`)
-    .run(token, userId, now.toISOString(), expires.toISOString());
+  const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  await query(`INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`,
+    [token, userId, now.toISOString(), expires.toISOString()]);
   return token;
 }
 
-function getSession(token) {
+async function getSession(token) {
   if (!token) return null;
-  const row = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
+  const row = await queryOne('SELECT * FROM sessions WHERE token = ?', [token]);
   if (!row) return null;
   if (new Date(row.expires_at) < new Date()) {
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+    await query('DELETE FROM sessions WHERE token = ?', [token]);
     return null;
   }
   return row;
 }
 
-function deleteSession(token) {
-  if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+async function deleteSession(token) {
+  if (token) await query('DELETE FROM sessions WHERE token = ?', [token]);
 }
 
-function getUserByToken(token) {
-  const sess = getSession(token);
+async function getUserByToken(token) {
+  const sess = await getSession(token);
   return sess ? getUserById(sess.user_id) : null;
 }
 
 /* ============================================================
    配额（按月重置）
    ============================================================ */
-function getQuotas(userId) {
-  const row = db.prepare('SELECT * FROM quotas WHERE user_id = ?').get(userId);
+async function getQuotas(userId) {
+  const row = await queryOne('SELECT * FROM quotas WHERE user_id = ?', [userId]);
   if (!row) {
-    db.prepare(`INSERT INTO quotas (user_id, contract_audit, tools, appliance, knowledge, reset_month)
-                VALUES (?, 5, 15, 15, 15, ?)`).run(userId, currentMonth());
+    await query(`INSERT INTO quotas (user_id, contract_audit, tools, appliance, knowledge, reset_month)
+                VALUES (?, 5, 15, 15, 15, ?)`, [userId, currentMonth()]);
     return { contractAudit: 5, appliance: 15, tools: 15, knowledge: 15 };
   }
   const month = currentMonth();
   if (row.reset_month !== month) {
-    db.prepare(`UPDATE quotas SET contract_audit = 5, tools = 15, appliance = 15, knowledge = 15, reset_month = ? WHERE user_id = ?`)
-      .run(month, userId);
+    await query(`UPDATE quotas SET contract_audit = 5, tools = 15, appliance = 15, knowledge = 15, reset_month = ? WHERE user_id = ?`,
+      [month, userId]);
     return { contractAudit: 5, appliance: 15, tools: 15, knowledge: 15 };
   }
   return { contractAudit: row.contract_audit, appliance: row.appliance, tools: row.tools, knowledge: row.knowledge };
 }
 
-function useQuota(userId, type) {
-  const user = getUserById(userId);
+async function useQuota(userId, type) {
+  const user = await getUserById(userId);
   if (!user) return { ok: false, msg: '请先登录' };
   if (user.isPro) return { ok: true };
   const col = type === 'contract' ? 'contract_audit' : type;
-  const row = db.prepare(`SELECT ${col} AS v, reset_month FROM quotas WHERE user_id = ?`).get(userId);
+  const row = await queryOne(`SELECT ${col} AS v, reset_month FROM quotas WHERE user_id = ?`, [userId]);
   if (!row) return { ok: false, msg: '配额不存在' };
   if (row.reset_month !== currentMonth()) {
-    getQuotas(userId); // 重置
+    await getQuotas(userId);
     return useQuota(userId, type);
   }
   if (row.v <= 0) return { ok: false, msg: '本月次数已用完，请开通专业版' };
-  db.prepare(`UPDATE quotas SET ${col} = ${col} - 1 WHERE user_id = ?`).run(userId);
-  const after = getQuotas(userId);
+  await query(`UPDATE quotas SET ${col} = ${col} - 1 WHERE user_id = ?`, [userId]);
+  const after = await getQuotas(userId);
   return { ok: true, remaining: after[type === 'contract' ? 'contractAudit' : type] };
 }
 
 /* ============================================================
    家电报错码（seed + 查询）
    ============================================================ */
-function seedApplianceCodes(codes) {
-  const count = db.prepare('SELECT COUNT(*) AS c FROM appliance_codes').get().c;
-  if (count > 0) return;
-  const stmt = db.prepare(`INSERT INTO appliance_codes (code, type, appliance_name, title, severity, brand, models, causes, solutions)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  db.exec('BEGIN');
+async function seedApplianceCodes(codes) {
+  const countRow = await queryOne('SELECT COUNT(*) AS c FROM appliance_codes');
+  if (countRow.c > 0) return;
+  const stmt = `INSERT INTO appliance_codes (code, type, appliance_name, title, severity, brand, models, causes, solutions)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   try {
+    await exec('BEGIN');
     for (const r of codes) {
-      stmt.run(r.code, r.appliance || r.type || '', r.applianceName || '', r.title || '',
+      await query(stmt, [r.code, r.appliance || r.type || '', r.applianceName || '', r.title || '',
                r.severity || 'info', r.brand || '', r.models || '',
-               JSON.stringify(r.causes || []), JSON.stringify(r.solutions || []));
+               JSON.stringify(r.causes || []), JSON.stringify(r.solutions || [])]);
     }
-    db.exec('COMMIT');
-  } catch (e) { db.exec('ROLLBACK'); throw e; }
+    await exec('COMMIT');
+  } catch (e) {
+    try { await exec('ROLLBACK'); } catch {}
+    throw e;
+  }
 }
 
-function searchApplianceCodes(keyword, type) {
+async function searchApplianceCodes(keyword, type) {
   let sql = 'SELECT * FROM appliance_codes WHERE 1=1';
   const params = [];
   if (keyword) { sql += ' AND (brand LIKE ? OR code LIKE ? OR title LIKE ? OR solutions LIKE ?)'; params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`); }
   if (type && type !== 'all') { sql += ' AND type = ?'; params.push(type); }
   sql += ' ORDER BY brand LIMIT 200';
-  return db.prepare(sql).all(...params).map(r => ({
+  const rows = await query(sql, params);
+  return rows.map(r => ({
     ...r,
     appliance: r.type,
     applianceName: r.appliance_name,
@@ -277,32 +316,36 @@ function searchApplianceCodes(keyword, type) {
 /* ============================================================
    工具（seed + 查询）
    ============================================================ */
-function seedTools(tools) {
-  const count = db.prepare('SELECT COUNT(*) AS c FROM tools').get().c;
-  if (count > 0) return;
-  const stmt = db.prepare(`INSERT INTO tools (id, name, desc, icon, category, category_name, impl, uses, likes, hot)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  db.exec('BEGIN');
+async function seedTools(tools) {
+  const countRow = await queryOne('SELECT COUNT(*) AS c FROM tools');
+  if (countRow.c > 0) return;
+  const stmt = `INSERT INTO tools (id, name, desc, icon, category, category_name, impl, uses, likes, hot)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   try {
+    await exec('BEGIN');
     for (const t of tools) {
-      stmt.run(t.id, t.name, t.desc, t.icon, t.category, t.categoryName || '', t.impl,
-               String(t.uses || '0'), String(t.likes || '0'), t.hot ? 1 : 0);
+      await query(stmt, [t.id, t.name, t.desc, t.icon, t.category, t.categoryName || '', t.impl,
+               String(t.uses || '0'), String(t.likes || '0'), t.hot ? 1 : 0]);
     }
-    db.exec('COMMIT');
-  } catch (e) { db.exec('ROLLBACK'); throw e; }
+    await exec('COMMIT');
+  } catch (e) {
+    try { await exec('ROLLBACK'); } catch {}
+    throw e;
+  }
 }
 
-function getTools(category, keyword) {
+async function getTools(category, keyword) {
   let sql = 'SELECT * FROM tools WHERE 1=1';
   const params = [];
   if (category && category !== 'all') { sql += ' AND category = ?'; params.push(category); }
   if (keyword) { sql += ' AND (name LIKE ? OR desc LIKE ?)'; params.push(`%${keyword}%`, `%${keyword}%`); }
-  sql += ' ORDER BY CAST(REPLACE(uses, \'k\', \'\') AS REAL) DESC LIMIT 1000';
-  return db.prepare(sql).all(...params).map(r => ({ ...r, hot: !!r.hot, categoryName: r.category_name }));
+  sql += ` ORDER BY CAST(REPLACE(uses, 'k', '') AS REAL) DESC LIMIT 1000`;
+  const rows = await query(sql, params);
+  return rows.map(r => ({ ...r, hot: !!r.hot, categoryName: r.category_name }));
 }
 
-function getToolById(id) {
-  const r = db.prepare('SELECT * FROM tools WHERE id = ?').get(id);
+async function getToolById(id) {
+  const r = await queryOne('SELECT * FROM tools WHERE id = ?', [id]);
   return r ? { ...r, hot: !!r.hot, categoryName: r.category_name } : null;
 }
 
@@ -311,7 +354,7 @@ function incToolUses(id) {
 }
 
 module.exports = {
-  db,
+  client,
   hashPassword, verifyPassword,
   uid, currentMonth,
   createUser, getUserById, getUserByUsername, getUserByOpenid, updateUser,
