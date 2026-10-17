@@ -31,12 +31,10 @@ if (TURSO_URL) {
 }
 
 async function exec(sql) {
-  await waitForInit();
   return client.execute(sql);
 }
 
 async function query(sql, args = []) {
-  await waitForInit();
   const res = await client.execute({ sql, args });
   return res.rows;
 }
