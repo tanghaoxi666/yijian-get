@@ -31,10 +31,12 @@ if (TURSO_URL) {
 }
 
 async function exec(sql) {
+  await waitForInit();
   return client.execute(sql);
 }
 
 async function query(sql, args = []) {
+  await waitForInit();
   const res = await client.execute({ sql, args });
   return res.rows;
 }
@@ -45,9 +47,9 @@ async function queryOne(sql, args = []) {
 }
 
 /* ============================================================
-   建表
+   建表（可等待的初始化 Promise）
    ============================================================ */
-(async () => {
+const initPromise = (async () => {
   try {
     await exec(`
 CREATE TABLE IF NOT EXISTS users (
@@ -112,8 +114,13 @@ CREATE TABLE IF NOT EXISTS tools (
     console.log('[db] 表结构已就绪');
   } catch (e) {
     console.error('[db] 建表失败:', e.message);
+    throw e;
   }
 })();
+
+async function waitForInit() {
+  await initPromise;
+}
 
 /* ============================================================
    密码哈希（scrypt，Node 内置）
@@ -279,6 +286,7 @@ async function useQuota(userId, type) {
    家电报错码（seed + 查询）
    ============================================================ */
 async function seedApplianceCodes(codes) {
+  await waitForInit();
   const countRow = await queryOne('SELECT COUNT(*) AS c FROM appliance_codes');
   if (countRow.c > 0) return;
   const stmt = `INSERT INTO appliance_codes (code, type, appliance_name, title, severity, brand, models, causes, solutions)
@@ -317,6 +325,7 @@ async function searchApplianceCodes(keyword, type) {
    工具（seed + 查询）
    ============================================================ */
 async function seedTools(tools) {
+  await waitForInit();
   const countRow = await queryOne('SELECT COUNT(*) AS c FROM tools');
   if (countRow.c > 0) return;
   const stmt = `INSERT INTO tools (id, name, desc, icon, category, category_name, impl, uses, likes, hot)
