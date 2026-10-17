@@ -1,0 +1,650 @@
+/* ============================================================
+   一键 Get — 新拟物风格设计令牌 + 组件样式
+   Neumorphic Design Tokens & Components
+   ============================================================ */
+
+:root {
+  /* ---- 基础背景 / Surface ---- */
+  --yj-background: #e8ecf2;
+  --yj-foreground: #2c3e50;
+  --yj-foreground-muted: #7f8c9b;
+  --yj-foreground-subtle: #a0aab8;
+
+  /* ---- 卡片 / 面板 ---- */
+  --yj-card: #e8ecf2;
+  --yj-card-foreground: #2c3e50;
+  --yj-popover: #e8ecf2;
+  --yj-popover-foreground: #2c3e50;
+
+  /* ---- 主色调 ---- */
+  --yj-primary: #4a7dff;
+  --yj-primary-foreground: #ffffff;
+  --yj-primary-tint: rgba(74, 125, 255, 0.12);
+  --yj-primary-soft: #6b94ff;
+
+  /* ---- Muted ---- */
+  --yj-muted: #d4dae3;
+  --yj-muted-foreground: #7f8c9b;
+
+  /* ---- 边框 ---- */
+  --yj-border: rgba(255, 255, 255, 0.6);
+  --yj-input: #e8ecf2;
+  --yj-ring: #4a7dff;
+
+  /* ---- 状态色 ---- */
+  --yj-state-success: #3db87b;
+  --yj-state-warning: #f0a93a;
+  --yj-state-error: #e86565;
+  --yj-state-info: #4a7dff;
+
+  /* ---- 新拟物阴影系统 ---- */
+  --nm-light: #ffffff;
+  --nm-dark: #c5cad3;
+  --nm-dark-soft: #d1d6df;
+
+  --nm-raised-sm: 3px 3px 6px var(--nm-dark), -3px -3px 6px var(--nm-light);
+  --nm-raised: 6px 6px 12px var(--nm-dark), -6px -6px 12px var(--nm-light);
+  --nm-raised-lg: 10px 10px 20px var(--nm-dark), -10px -10px 20px var(--nm-light);
+
+  --nm-pressed-sm: inset 2px 2px 5px var(--nm-dark), inset -2px -2px 5px var(--nm-light);
+  --nm-pressed: inset 4px 4px 8px var(--nm-dark), inset -4px -4px 8px var(--nm-light);
+  --nm-pressed-lg: inset 6px 6px 12px var(--nm-dark), inset -6px -6px 12px var(--nm-light);
+
+  --nm-flat: 2px 2px 4px var(--nm-dark-soft), -2px -2px 4px var(--nm-light);
+
+  /* ---- 圆角 ---- */
+  --yj-radius-sm: 8px;
+  --yj-radius-md: 14px;
+  --yj-radius-lg: 20px;
+  --yj-radius-xl: 28px;
+  --yj-radius-pill: 999px;
+
+  /* ---- 字体 ---- */
+  --yj-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+
+  /* ---- 间距 ---- */
+  --yj-space-1: 4px;
+  --yj-space-2: 8px;
+  --yj-space-3: 12px;
+  --yj-space-4: 16px;
+  --yj-space-5: 24px;
+  --yj-space-6: 32px;
+  --yj-space-7: 48px;
+  --yj-space-8: 64px;
+}
+
+/* 暗色模式 */
+html.dark {
+  --yj-background: #2a2d34;
+  --yj-foreground: #e8ecf2;
+  --yj-foreground-muted: #9aa3b0;
+  --yj-foreground-subtle: #6b7280;
+  --yj-card: #2a2d34;
+  --yj-card-foreground: #e8ecf2;
+  --yj-popover: #2a2d34;
+  --yj-popover-foreground: #e8ecf2;
+  --yj-muted: #3a3e47;
+  --yj-muted-foreground: #9aa3b0;
+  --yj-border: rgba(255, 255, 255, 0.06);
+  --yj-input: #2a2d34;
+  --nm-light: #353942;
+  --nm-dark: #1f2127;
+  --nm-dark-soft: #26292f;
+}
+
+/* ============================================================
+   基础
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--yj-background);
+  color: var(--yj-foreground);
+  font-family: var(--yj-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* ============================================================
+   新拟物阴影工具类
+   ============================================================ */
+.nm-raised-sm { box-shadow: var(--nm-raised-sm); }
+.nm-raised { box-shadow: var(--nm-raised); }
+.nm-raised-lg { box-shadow: var(--nm-raised-lg); }
+.nm-pressed-sm { box-shadow: var(--nm-pressed-sm); }
+.nm-pressed { box-shadow: var(--nm-pressed); }
+.nm-pressed-lg { box-shadow: var(--nm-pressed-lg); }
+.nm-flat { box-shadow: var(--nm-flat); }
+
+/* ============================================================
+   按钮
+   ============================================================ */
+.nm-btn {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+.nm-btn:hover { transform: translateY(-1px); }
+.nm-btn:active {
+  box-shadow: var(--nm-pressed-sm);
+  transform: translateY(0);
+}
+
+.nm-btn-primary {
+  background: var(--yj-primary);
+  color: var(--yj-primary-foreground);
+  box-shadow: 4px 4px 8px rgba(74, 125, 255, 0.3), -4px -4px 8px var(--nm-light);
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+.nm-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 5px 5px 10px rgba(74, 125, 255, 0.35), -5px -5px 10px var(--nm-light);
+}
+.nm-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 2px 2px 4px rgba(74, 125, 255, 0.3), -2px -2px 4px var(--nm-light);
+}
+
+/* ============================================================
+   导航项
+   ============================================================ */
+.nav-item {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.nav-item:hover:not(.nav-active) {
+  box-shadow: var(--nm-raised-sm);
+}
+.nav-item.nav-active {
+  box-shadow: var(--nm-pressed);
+  color: var(--yj-primary);
+  font-weight: 600;
+}
+
+/* ============================================================
+   上传区
+   ============================================================ */
+.upload-area { transition: all 0.3s ease; cursor: pointer; }
+.upload-area:hover {
+  box-shadow: inset 5px 5px 10px var(--nm-dark), inset -5px -5px 10px var(--nm-light);
+}
+.upload-area.dragover {
+  box-shadow: inset 5px 5px 10px var(--nm-dark), inset -5px -5px 10px var(--nm-light), 0 0 0 3px var(--yj-primary-tint);
+}
+
+/* ============================================================
+   风险点 / 状态点
+   ============================================================ */
+.risk-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.nm-dot-shadow {
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15), -1px -1px 2px rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================================
+   分割线（新拟物凹槽）
+   ============================================================ */
+.nm-divider {
+  border: none;
+  position: relative;
+}
+.nm-divider::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--nm-dark), transparent);
+  opacity: 0.6;
+}
+.nm-divider::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--nm-light), transparent);
+  opacity: 0.8;
+}
+
+/* ============================================================
+   侧边栏分割线
+   ============================================================ */
+.nm-sidebar-divider { position: relative; }
+.nm-sidebar-divider::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--nm-dark), transparent);
+  opacity: 0.5;
+}
+.nm-sidebar-divider::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; right: -1px;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--nm-light), transparent);
+  opacity: 0.7;
+}
+
+/* ============================================================
+   结果项 / 卡片 hover
+   ============================================================ */
+.result-item, .tool-card, .tool-card-sm, .popular-card, .kb-card, .recent-item, .step-card {
+  transition: all 0.2s ease;
+}
+.result-item:hover,
+.tool-card:hover,
+.tool-card-sm:hover,
+.popular-card:hover,
+.kb-card:hover,
+.recent-item:hover,
+.step-card:hover {
+  box-shadow: var(--nm-raised-sm);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   滚动条
+   ============================================================ */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.main-content::-webkit-scrollbar { width: 6px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--yj-muted);
+  border-radius: 3px;
+}
+
+/* ============================================================
+   认证页样式 (登录/注册)
+   ============================================================ */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: var(--yj-background);
+}
+.auth-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.auth-logo-icon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--yj-background);
+  box-shadow: var(--nm-raised-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.auth-logo-icon svg, .auth-logo-icon i {
+  width: 32px; height: 32px;
+  color: var(--yj-primary);
+}
+.auth-title {
+  font-size: 28px; font-weight: 700;
+  color: var(--yj-foreground);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--yj-foreground-muted);
+  margin: 0;
+}
+.auth-card {
+  width: 420px;
+  background: var(--yj-card);
+  border-radius: var(--yj-radius-xl);
+  box-shadow: var(--nm-raised-lg);
+  padding: 36px;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yj-foreground-muted);
+  padding-left: 4px;
+}
+
+/* 输入框 */
+.nm-input-wrap {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 18px;
+  background: var(--yj-input);
+  border-radius: var(--yj-radius-lg);
+  box-shadow: var(--nm-pressed);
+  transition: box-shadow 0.2s ease;
+}
+.nm-input-wrap:focus-within {
+  box-shadow: var(--nm-pressed-lg), 0 0 0 3px var(--yj-primary-tint);
+}
+.nm-input-icon {
+  width: 20px; height: 20px;
+  color: var(--yj-foreground-subtle);
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.nm-input {
+  flex: 1; height: 100%;
+  background: transparent;
+  border: none; outline: none;
+  font-size: 15px;
+  color: var(--yj-foreground);
+  font-family: inherit;
+}
+.nm-input::placeholder { color: var(--yj-foreground-subtle); }
+.nm-input-toggle {
+  width: 20px; height: 20px;
+  color: var(--yj-foreground-subtle);
+  flex-shrink: 0;
+  margin-left: 12px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.nm-input-toggle:hover { color: var(--yj-primary); }
+
+/* 复选框 */
+.nm-checkbox-wrap, .agree-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.agree-wrap { align-items: flex-start; }
+.nm-checkbox {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  background: var(--yj-background);
+  box-shadow: var(--nm-raised-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.nm-checkbox.checked {
+  box-shadow: var(--nm-pressed-sm);
+  background: var(--yj-primary-tint);
+}
+.nm-checkbox svg {
+  width: 14px; height: 14px;
+  color: var(--yj-primary);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.nm-checkbox.checked svg { opacity: 1; }
+.nm-checkbox-label, .agree-text {
+  font-size: 13px;
+  color: var(--yj-foreground-muted);
+  line-height: 1.6;
+}
+.agree-text a {
+  color: var(--yj-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.agree-text a:hover { text-decoration: underline; }
+
+/* 认证主按钮 */
+.auth-card .nm-btn-primary {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--yj-radius-lg);
+  background: linear-gradient(145deg, #5a8aff, #3e6ce8);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* 分割线 */
+.nm-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+.nm-divider::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: linear-gradient(to right, transparent 0%, var(--nm-dark) 20%, var(--nm-dark) 80%, transparent 100%);
+  opacity: 0.5;
+}
+.nm-divider::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: calc(50% + 1px);
+  height: 1px;
+  background: linear-gradient(to right, transparent 0%, var(--nm-light) 20%, var(--nm-light) 80%, transparent 100%);
+  opacity: 0.8;
+}
+.nm-divider-text {
+  position: relative;
+  z-index: 1;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--yj-background);
+  box-shadow: var(--nm-raised-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--yj-foreground-muted);
+  font-weight: 500;
+}
+
+/* 第三方登录 */
+.social-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 6px;
+}
+.nm-social-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--yj-background);
+  box-shadow: var(--nm-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+.nm-social-btn:hover {
+  box-shadow: var(--nm-raised-sm);
+  transform: translateY(-2px);
+}
+.nm-social-btn:active {
+  box-shadow: var(--nm-pressed-sm);
+  transform: translateY(0);
+}
+.nm-social-btn svg, .nm-social-btn i {
+  width: 22px; height: 22px;
+}
+.social-wechat svg, .social-wechat i { color: #07c160; }
+.social-qq svg, .social-qq i { color: #12b7f5; }
+.social-email svg, .social-email i { color: var(--yj-foreground-muted); }
+
+.auth-bottom-link {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 14px;
+  color: var(--yj-foreground-muted);
+}
+.auth-bottom-link a {
+  color: var(--yj-primary);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
+}
+.auth-bottom-link a:hover { opacity: 0.8; }
+
+.auth-footer {
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--yj-foreground-subtle);
+  text-align: center;
+}
+
+/* ============================================================
+   移动端适配
+   ============================================================ */
+/* 平板 */
+@media (max-width: 900px) {
+  .auth-card { width: 380px; padding: 28px; }
+  .auth-title { font-size: 24px; }
+  .auth-logo-icon { width: 64px; height: 64px; }
+  .auth-logo-icon svg, .auth-logo-icon i { width: 28px; height: 28px; }
+  .nm-input-wrap { height: 46px; }
+  .auth-card .nm-btn-primary { height: 48px; }
+}
+
+/* 手机 */
+@media (max-width: 768px) {
+  .auth-page {
+    padding: 20px 12px;
+    justify-content: flex-start;
+    padding-top: 32px;
+  }
+  .auth-card {
+    width: 90%;
+    max-width: 360px;
+    padding: 24px 20px;
+    border-radius: var(--yj-radius-lg);
+  }
+  .auth-logo-wrap { margin-bottom: 20px; }
+  .auth-logo-icon { width: 56px; height: 56px; margin-bottom: 14px; }
+  .auth-logo-icon svg, .auth-logo-icon i { width: 24px; height: 24px; }
+  .auth-title { font-size: 22px; }
+  .auth-subtitle { font-size: 13px; }
+  .nm-input-wrap { height: 44px; padding: 0 14px; border-radius: var(--yj-radius-md); }
+  .nm-input-icon { width: 18px; height: 18px; margin-right: 10px; }
+  .nm-input { font-size: 14px; }
+  .auth-card .nm-btn-primary { height: 46px; font-size: 15px; border-radius: var(--yj-radius-md); }
+  .social-login { gap: 20px; }
+  .nm-social-btn { width: 42px; height: 42px; }
+  .nm-social-btn svg, .nm-social-btn i { width: 20px; height: 20px; }
+  .auth-footer { margin-top: 24px; font-size: 11px; }
+  .agree-text { font-size: 12px; }
+}
+
+/* ============================================================
+   移动端抽屉侧栏
+   ============================================================ */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 62, 80, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+}
+.sidebar-overlay.active { display: block; }
+
+@media (max-width: 768px) {
+  #sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 260px;
+    display: flex !important;
+    background: var(--yj-background);
+  }
+  #sidebar.open { transform: translateX(0); }
+}
+
+/* ============================================================
+   Toast 提示
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  padding: 12px 20px;
+  border-radius: var(--yj-radius-md);
+  background: var(--yj-card);
+  color: var(--yj-foreground);
+  font-size: 14px;
+  box-shadow: var(--nm-raised);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toast-in 0.3s ease;
+  pointer-events: auto;
+}
+.toast.success { border-left: 3px solid var(--yj-state-success); }
+.toast.error { border-left: 3px solid var(--yj-state-error); }
+.toast.warning { border-left: 3px solid var(--yj-state-warning); }
+.toast.info { border-left: 3px solid var(--yj-state-info); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   主题切换按钮
+   ============================================================ */
+.theme-toggle {
+  cursor: pointer;
+}
+
+/* 选中态通用 */
+.category-item, .appliance-item {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: var(--yj-background);
+}
+.category-item[data-active="true"],
+.appliance-item[data-active="true"] {
+  box-shadow: var(--nm-pressed-sm) !important;
+  color: var(--yj-primary) !important;
+}
+.category-item[data-active="true"] i,
+.appliance-item[data-active="true"] i {
+  color: var(--yj-primary) !important;
+}

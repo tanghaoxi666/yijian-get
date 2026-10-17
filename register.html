@@ -1,0 +1,114 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="dark" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注册 - 一键 Get</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+  <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen font-sans antialiased">
+  <main class="auth-page">
+    <!-- Logo 区 -->
+    <div class="auth-logo-wrap">
+      <div class="auth-logo-icon">
+        <i data-lucide="user-plus"></i>
+      </div>
+      <h1 class="auth-title">创建账号</h1>
+      <p class="auth-subtitle">加入「一键 Get」，解锁全部功能</p>
+    </div>
+
+    <!-- 注册卡片 -->
+    <div class="auth-card">
+      <form id="register-form" class="auth-form" onsubmit="return false;">
+        <!-- 用户名 -->
+        <div class="form-group">
+          <label class="form-label" for="reg-username">用户名</label>
+          <div class="nm-input-wrap">
+            <i data-lucide="user" class="nm-input-icon"></i>
+            <input type="text" id="reg-username" class="nm-input" placeholder="请输入用户名" autocomplete="username">
+          </div>
+        </div>
+
+        <!-- 邮箱 -->
+        <div class="form-group">
+          <label class="form-label" for="reg-email">邮箱</label>
+          <div class="nm-input-wrap">
+            <i data-lucide="mail" class="nm-input-icon"></i>
+            <input type="email" id="reg-email" class="nm-input" placeholder="请输入邮箱地址" autocomplete="email">
+          </div>
+        </div>
+
+        <!-- 密码 -->
+        <div class="form-group">
+          <label class="form-label" for="reg-password">密码</label>
+          <div class="nm-input-wrap">
+            <i data-lucide="lock" class="nm-input-icon"></i>
+            <input type="password" id="reg-password" class="nm-input" placeholder="请设置密码（至少 8 位）" autocomplete="new-password">
+            <button type="button" class="nm-input-toggle" data-toggle-password="reg-password">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 确认密码 -->
+        <div class="form-group">
+          <label class="form-label" for="reg-confirm-password">确认密码</label>
+          <div class="nm-input-wrap">
+            <i data-lucide="lock" class="nm-input-icon"></i>
+            <input type="password" id="reg-confirm-password" class="nm-input" placeholder="请再次输入密码" autocomplete="new-password">
+            <button type="button" class="nm-input-toggle" data-toggle-password="reg-confirm-password">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 同意协议 -->
+        <label class="agree-wrap">
+          <div class="nm-checkbox checked">
+            <i data-lucide="check"></i>
+          </div>
+          <span class="agree-text">
+            我已阅读并同意
+            <a href="#" onclick="event.stopPropagation();">用户协议</a>
+            和
+            <a href="#" onclick="event.stopPropagation();">隐私政策</a>
+          </span>
+        </label>
+
+        <!-- 注册按钮 -->
+        <button type="submit" class="nm-btn nm-btn-primary">注 册</button>
+
+        <!-- 分割线 -->
+        <div class="nm-divider">
+          <span class="nm-divider-text">或</span>
+        </div>
+      </form>
+
+      <!-- 第三方登录 -->
+      <div class="social-login">
+        <button class="nm-social-btn social-wechat" title="微信注册">
+          <i data-lucide="message-circle"></i>
+        </button>
+        <button class="nm-social-btn social-qq" title="QQ 注册">
+          <i data-lucide="octagon"></i>
+        </button>
+      </div>
+
+      <!-- 底部链接 -->
+      <div class="auth-bottom-link">
+        已有账号？<a href="login.html">立即登录</a>
+      </div>
+    </div>
+
+    <!-- 底部版权 -->
+    <div class="auth-footer">
+      &copy; 2026 一键 Get. All rights reserved.
+    </div>
+  </main>
+  <script src="js/seed-data.js?v=8"></script>
+  <script src="js/store.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "yijian-get",
+  "version": "1.0.0",
+  "description": "一键 Get — 合同审计 / 家电报错 / 工具库 / 知识库",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
