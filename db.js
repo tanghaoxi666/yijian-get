@@ -288,18 +288,13 @@ async function seedApplianceCodes(codes) {
   if (countRow.c > 0) return;
   const stmt = `INSERT INTO appliance_codes (code, type, appliance_name, title, severity, brand, models, causes, solutions)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  try {
-    await exec('BEGIN');
-    for (const r of codes) {
-      await query(stmt, [r.code, r.appliance || r.type || '', r.applianceName || '', r.title || '',
-               r.severity || 'info', r.brand || '', r.models || '',
-               JSON.stringify(r.causes || []), JSON.stringify(r.solutions || [])]);
-    }
-    await exec('COMMIT');
-  } catch (e) {
-    try { await exec('ROLLBACK'); } catch {}
-    throw e;
-  }
+  const steps = codes.map(r => ({
+    sql: stmt,
+    args: [r.code, r.appliance || r.type || '', r.applianceName || '', r.title || '',
+           r.severity || 'info', r.brand || '', r.models || '',
+           JSON.stringify(r.causes || []), JSON.stringify(r.solutions || [])],
+  }));
+  await client.batch(steps, 'write');
 }
 
 async function searchApplianceCodes(keyword, type) {
@@ -327,17 +322,12 @@ async function seedTools(tools) {
   if (countRow.c > 0) return;
   const stmt = `INSERT INTO tools (id, name, desc, icon, category, category_name, impl, uses, likes, hot)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  try {
-    await exec('BEGIN');
-    for (const t of tools) {
-      await query(stmt, [t.id, t.name, t.desc, t.icon, t.category, t.categoryName || '', t.impl,
-               String(t.uses || '0'), String(t.likes || '0'), t.hot ? 1 : 0]);
-    }
-    await exec('COMMIT');
-  } catch (e) {
-    try { await exec('ROLLBACK'); } catch {}
-    throw e;
-  }
+  const steps = tools.map(t => ({
+    sql: stmt,
+    args: [t.id, t.name, t.desc, t.icon, t.category, t.categoryName || '', t.impl,
+           String(t.uses || '0'), String(t.likes || '0'), t.hot ? 1 : 0],
+  }));
+  await client.batch(steps, 'write');
 }
 
 async function getTools(category, keyword) {
