@@ -30,7 +30,8 @@ const db = require('./db.js');
 const { SEED_APPLIANCE_CODES, buildTools } = require('./seed-data.js');
 
 const PORT = process.env.PORT || 8080;
-const ROOT = __dirname;
+// 在 Netlify Functions 中，__dirname 指向 netlify/functions，需要回到项目根目录
+const ROOT = process.env.NETLIFY ? path.resolve(__dirname, '../..') : __dirname;
 const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 
 // OAuth 凭证（从环境变量读取，未配置则提示用户）

@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
+    "@libsql/linux-x64-gnu": "0.4.4",
     "serverless-http": "^3.2.0"
   },
   "allowScripts": {
     "@libsql/client": true,
+    "@libsql/linux-x64-gnu": true,
     "serverless-http": true
   },
   "license": "MIT"
