@@ -405,9 +405,14 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`\n🚀 一键 Get 服务已启动: http://localhost:${PORT}`);
-  console.log(`   微信登录: ${WECHAT.appId ? '已配置' : '未配置 (设置 WECHAT_APP_ID / WECHAT_APP_SECRET)'}`);
-  console.log(`   QQ 登录:   ${QQ.appId ? '已配置' : '未配置 (设置 QQ_APP_ID / QQ_APP_SECRET)'}`);
-  console.log(`   数据库:   ${path.join(ROOT, 'data', 'app.db')}\n`);
-});
+// 仅在直接运行时启动服务器（serverless 环境不调用 listen）
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`\n🚀 一键 Get 服务已启动: http://localhost:${PORT}`);
+    console.log(`   微信登录: ${WECHAT.appId ? '已配置' : '未配置 (设置 WECHAT_APP_ID / WECHAT_APP_SECRET)'}`);
+    console.log(`   QQ 登录:   ${QQ.appId ? '已配置' : '未配置 (设置 QQ_APP_ID / QQ_APP_SECRET)'}`);
+    console.log(`   数据库:   ${path.join(ROOT, 'data', 'app.db')}\n`);
+  });
+}
+
+module.exports = server;
