@@ -13,5 +13,9 @@
     "@libsql/client": "^0.14.0",
     "serverless-http": "^3.2.0"
   },
+  "allowScripts": {
+    "@libsql/client": true,
+    "serverless-http": true
+  },
   "license": "MIT"
 }
