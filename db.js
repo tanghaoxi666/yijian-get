@@ -49,8 +49,8 @@ async function queryOne(sql, args = []) {
    ============================================================ */
 const initPromise = (async () => {
   try {
-    await exec(`
-CREATE TABLE IF NOT EXISTS users (
+    const statements = [
+      `CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE,
   email TEXT UNIQUE,
@@ -62,17 +62,15 @@ CREATE TABLE IF NOT EXISTS users (
   openid_wechat TEXT UNIQUE,
   openid_qq TEXT UNIQUE,
   created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
+)`,
+      `CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS quotas (
+)`,
+      `CREATE TABLE IF NOT EXISTS quotas (
   user_id TEXT PRIMARY KEY,
   contract_audit INTEGER DEFAULT 5,
   tools INTEGER DEFAULT 15,
@@ -80,9 +78,8 @@ CREATE TABLE IF NOT EXISTS quotas (
   knowledge INTEGER DEFAULT 15,
   reset_month TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS appliance_codes (
+)`,
+      `CREATE TABLE IF NOT EXISTS appliance_codes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   code TEXT NOT NULL,
   type TEXT NOT NULL,
@@ -93,9 +90,8 @@ CREATE TABLE IF NOT EXISTS appliance_codes (
   models TEXT,
   causes TEXT,
   solutions TEXT
-);
-
-CREATE TABLE IF NOT EXISTS tools (
+)`,
+      `CREATE TABLE IF NOT EXISTS tools (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   desc TEXT NOT NULL,
@@ -106,9 +102,12 @@ CREATE TABLE IF NOT EXISTS tools (
   uses TEXT DEFAULT '0',
   likes TEXT DEFAULT '0',
   hot INTEGER DEFAULT 0
-);
-`);
-    await exec('PRAGMA foreign_keys = ON;');
+)`,
+      `PRAGMA foreign_keys = ON`,
+    ];
+    for (const sql of statements) {
+      await exec(sql);
+    }
     console.log('[db] 表结构已就绪');
   } catch (e) {
     console.error('[db] 建表失败:', e.message);
