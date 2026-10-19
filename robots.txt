@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yijian-get.netlify.app/sitemap.xml
