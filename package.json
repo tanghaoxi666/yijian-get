@@ -2,22 +2,69 @@
   "name": "yijian-get",
   "version": "1.0.0",
   "description": "一键 Get — 合同审计 / 家电报错 / 工具库 / 知识库",
-  "main": "server.js",
+  "main": "electron/main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "electron": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
-    "@libsql/linux-x64-gnu": "0.4.4",
     "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.yijian.get.app",
+    "productName": "一键Get",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/@libsql/**",
+      "!netlify/**",
+      "!dist/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "一键Get-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "一键Get"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
   },
   "allowScripts": {
     "@libsql/client": true,
     "@libsql/linux-x64-gnu": true,
-    "serverless-http": true
+    "serverless-http": true,
+    "electron@28.3.3": true
   },
   "license": "MIT"
 }

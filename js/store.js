@@ -19,8 +19,40 @@ const Store = (() => {
   let _knowledgeCache = null;
   let _knowledgeIndex = null;
 
+  /* ---------- 判断是否为桌面版 ---------- */
+  const isDesktop = !!window.electronAPI?.isDesktop;
+
+  /* ---------- 桌面版本地数据存储 ---------- */
+  function getLocalUsers() {
+    return JSON.parse(localStorage.getItem('yj_users') || '[]');
+  }
+  function saveLocalUsers(users) {
+    localStorage.setItem('yj_users', JSON.stringify(users));
+  }
+  function getLocalSessions() {
+    return JSON.parse(localStorage.getItem('yj_sessions') || '{}');
+  }
+  function saveLocalSession(token, user) {
+    const sessions = getLocalSessions();
+    sessions[token] = user;
+    localStorage.setItem('yj_sessions', JSON.stringify(sessions));
+  }
+  function genToken() {
+    return 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+  function hashPwd(pwd) {
+    // 简单哈希，桌面版用
+    let h = 0;
+    for (let i = 0; i < pwd.length; i++) h = ((h << 5) - h + pwd.charCodeAt(i)) | 0;
+    return 'h_' + Math.abs(h).toString(36);
+  }
+
   /* ---------- 通用 API 请求 ---------- */
   async function api(path, options = {}) {
+    // 桌面版：使用本地存储模拟 API
+    if (isDesktop) {
+      return await desktopApi(path, options);
+    }
     const res = await fetch(path, {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -28,6 +60,106 @@ const Store = (() => {
     });
     const data = await res.json().catch(() => ({}));
     return data;
+  }
+
+  /* ---------- 桌面版 API 模拟 ---------- */
+  async function desktopApi(path, options = {}) {
+    await new Promise(r => setTimeout(r, 100)); // 模拟延迟
+    const body = options.body ? JSON.parse(options.body) : {};
+    const sessions = getLocalSessions();
+    const sessionToken = localStorage.getItem('yj_session');
+    const currentUser = sessionToken ? sessions[sessionToken] : null;
+
+    // 认证相关
+    if (path === '/api/auth/me') {
+      if (currentUser) {
+        const quotas = JSON.parse(localStorage.getItem('yj_quotas_' + currentUser.id) || 'null') ||
+          { contractAudit: 999, appliance: 999, tools: 999, knowledge: 999 };
+        return { ok: true, user: currentUser, quotas };
+      }
+      return { ok: false, msg: '未登录' };
+    }
+    if (path === '/api/auth/register' && options.method === 'POST') {
+      const { username, email, password } = body;
+      if (!username || !password) return { ok: false, msg: '用户名和密码必填' };
+      const users = getLocalUsers();
+      if (users.find(u => u.username === username)) return { ok: false, msg: '用户名已存在' };
+      if (email && users.find(u => u.email === email)) return { ok: false, msg: '邮箱已被注册' };
+      const user = {
+        id: 'u_' + Date.now().toString(36),
+        username, email: email || null,
+        isPro: false, nickname: username, avatar: null,
+        createdAt: new Date().toISOString(),
+      };
+      users.push({ ...user, passwordHash: hashPwd(password) });
+      saveLocalUsers(users);
+      const token = genToken();
+      saveLocalSession(token, user);
+      localStorage.setItem('yj_session', token);
+      return { ok: true, user };
+    }
+    if (path === '/api/auth/login' && options.method === 'POST') {
+      const { account, password } = body;
+      const users = getLocalUsers();
+      const u = users.find(u => u.username === account || u.email === account);
+      if (!u || u.passwordHash !== hashPwd(password)) return { ok: false, msg: '账号或密码错误' };
+      const user = { id: u.id, username: u.username, email: u.email, isPro: u.isPro, nickname: u.nickname, avatar: u.avatar };
+      const token = genToken();
+      saveLocalSession(token, user);
+      localStorage.setItem('yj_session', token);
+      return { ok: true, user };
+    }
+    if (path === '/api/auth/logout' && options.method === 'POST') {
+      if (sessionToken) {
+        const sessions = getLocalSessions();
+        delete sessions[sessionToken];
+        localStorage.setItem('yj_sessions', JSON.stringify(sessions));
+      }
+      localStorage.removeItem('yj_session');
+      return { ok: true };
+    }
+    if (path === '/api/user/upgrade' && options.method === 'POST') {
+      if (!currentUser) return { ok: false, msg: '请先登录' };
+      const users = getLocalUsers();
+      const idx = users.findIndex(u => u.id === currentUser.id);
+      if (idx >= 0) {
+        users[idx].isPro = true;
+        saveLocalUsers(users);
+        currentUser.isPro = true;
+        const sessions = getLocalSessions();
+        sessions[sessionToken] = currentUser;
+        localStorage.setItem('yj_sessions', JSON.stringify(sessions));
+      }
+      return { ok: true, user: currentUser };
+    }
+    // 配额
+    if (path === '/api/quotas') {
+      if (!currentUser) return { ok: false, msg: '请先登录' };
+      const quotas = JSON.parse(localStorage.getItem('yj_quotas_' + currentUser.id) || 'null') ||
+        { contractAudit: 999, appliance: 999, tools: 999, knowledge: 999 };
+      return { ok: true, quotas };
+    }
+    if (path === '/api/quotas/use' && options.method === 'POST') {
+      if (!currentUser) return { ok: false, msg: '请先登录' };
+      if (currentUser.isPro) return { ok: true };
+      const qKey = 'yj_quotas_' + currentUser.id;
+      const quotas = JSON.parse(localStorage.getItem(qKey) || 'null') ||
+        { contractAudit: 999, appliance: 999, tools: 999, knowledge: 999 };
+      const col = body.type === 'contract' ? 'contractAudit' : body.type;
+      if (quotas[col] <= 0) return { ok: false, msg: '本月次数已用完，请开通专业版' };
+      quotas[col]--;
+      localStorage.setItem(qKey, JSON.stringify(quotas));
+      return { ok: true, remaining: quotas[col] };
+    }
+    // 家电报错码
+    if (path === '/api/appliance') {
+      return { ok: true, data: SEED_APPLIANCE_CODES };
+    }
+    // 工具列表
+    if (path === '/api/tools') {
+      return { ok: true, data: buildTools() };
+    }
+    return { ok: false, msg: '未知接口' };
   }
 
   /* ============================================================

@@ -84,6 +84,10 @@ function sendJSON(res, data, status = 200) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
   });
   res.end(body);
 }
@@ -118,12 +122,24 @@ async function authUser(req) {
 
 function setSessionCookie(res, token) {
   const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+  const secure = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
   res.setHeader('Set-Cookie',
-    `session=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`);
+    `session=${token}; Path=/; HttpOnly; SameSite=Lax; ${secure}Expires=${expires}`);
 }
 
 function clearSessionCookie(res) {
-  res.setHeader('Set-Cookie', 'session=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+  const secure = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
+  res.setHeader('Set-Cookie', `session=; Path=/; HttpOnly; SameSite=Lax; ${secure}Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+}
+
+// 登录失败限制（简单内存计数）
+const loginAttempts = new Map();
+function checkLoginLimit(account) {
+  const key = account + '|' + (Date.now() / 60000 | 0);
+  const count = loginAttempts.get(key) || 0;
+  if (count >= 5) return false;
+  loginAttempts.set(key, count + 1);
+  return true;
 }
 
 /* ============================================================
@@ -248,7 +264,13 @@ async function handleQqCallback(req, res, query) {
 }
 
 function sendHTML(res, html, status = 200) {
-  res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.writeHead(status, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  });
   res.end(html);
 }
 
@@ -274,6 +296,9 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/auth/register' && req.method === 'POST') {
         const { username, email, password } = await parseBody(req);
         if (!username || !password) return sendJSON(res, { ok: false, msg: '用户名和密码必填' }, 400);
+        if (username.length < 2 || username.length > 20) return sendJSON(res, { ok: false, msg: '用户名长度需在 2-20 之间' }, 400);
+        if (password.length < 8) return sendJSON(res, { ok: false, msg: '密码至少 8 位' }, 400);
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return sendJSON(res, { ok: false, msg: '邮箱格式不正确' }, 400);
         const result = await db.createUser({ username, email, password });
         const token = await db.createSession(result.id);
         setSessionCookie(res, token);
@@ -282,6 +307,7 @@ const server = http.createServer(async (req, res) => {
 
       if (pathname === '/api/auth/login' && req.method === 'POST') {
         const { account, password } = await parseBody(req);
+        if (!checkLoginLimit(account)) return sendJSON(res, { ok: false, msg: '登录失败次数过多，请稍后再试' }, 429);
         const u = await db.getUserByUsername(account);
         if (!u || !u.passwordHash || !db.verifyPassword(password, u.passwordHash, u.passwordSalt)) {
           return sendJSON(res, { ok: false, msg: '账号或密码错误' }, 401);

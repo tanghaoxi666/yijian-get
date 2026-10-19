@@ -19,3 +19,10 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+# Electron 构建产物
+dist/
+
+# 桌面版安装包（由下载链接提供）
+downloads/*.exe
+!downloads/.gitkeep
