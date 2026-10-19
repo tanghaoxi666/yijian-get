@@ -294,11 +294,22 @@ function initSocialLogin() {
       e.stopPropagation();
       const type = btn.dataset.socialLogin;
       if (type === 'wechat') {
-        // 真实微信 OAuth：跳转到后端授权端点
-        window.location.href = '/api/auth/wechat';
+        // 检查微信 OAuth 是否配置，已配置则跳转，未配置则提示
+        fetch('/api/auth/wechat', { redirect: 'manual' }).then(r => {
+          if (r.type === 'opaqueredirect') {
+            window.location.href = '/api/auth/wechat';
+          } else {
+            showToast('微信登录暂未开放，请使用账号密码登录', 'warning');
+          }
+        }).catch(() => showToast('网络错误，请稍后重试', 'error'));
       } else if (type === 'qq') {
-        // 真实 QQ OAuth：跳转到后端授权端点
-        window.location.href = '/api/auth/qq';
+        fetch('/api/auth/qq', { redirect: 'manual' }).then(r => {
+          if (r.type === 'opaqueredirect') {
+            window.location.href = '/api/auth/qq';
+          } else {
+            showToast('QQ 登录暂未开放，请使用账号密码登录', 'warning');
+          }
+        }).catch(() => showToast('网络错误，请稍后重试', 'error'));
       } else if (type === 'email') {
         body.innerHTML = `
           <h3 class="text-lg font-bold text-[var(--yj-foreground)] mb-1 text-center">微信扫码登录</h3>
