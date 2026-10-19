@@ -16,7 +16,17 @@ function eventToRequest(event) {
   req.method = method;
   req.url = url;
   req.headers = headers;
-  req.body = event.body ? Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8') : null;
+
+  // Netlify 提供 event.body，需要模拟 stream 触发 data/end 事件
+  const bodyBuffer = event.body
+    ? Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8')
+    : Buffer.alloc(0);
+
+  // 异步推送到 stream，让 parseBody 的事件监听器能接收到
+  process.nextTick(() => {
+    if (bodyBuffer.length > 0) req.emit('data', bodyBuffer);
+    req.emit('end');
+  });
 
   return req;
 }
