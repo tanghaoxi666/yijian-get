@@ -1,0 +1,28 @@
+{
+  "name": "一键 Get - 合同审计、家电报错码、工具合集",
+  "short_name": "一键Get",
+  "description": "一键 Get 是一个多功能在线工具平台，提供开源合同审计、家电故障报错码查询、JSON格式化等实用开发工具。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f4f8",
+  "theme_color": "#6366f1",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

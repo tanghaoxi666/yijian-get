@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initApplianceSwitch();
   initMobileTabbar();
   initMemberUpgrade(); // 开通会员
+  initPWAInstall();    // PWA 安装引导
 });
 
 /* ============================================================
@@ -923,14 +924,14 @@ function initMobileTabbar() {
 }
 
 /* ---------- Toast ---------- */
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 2200) {
   let container = document.querySelector('.toast-container');
   if (!container) { container = document.createElement('div'); container.className = 'toast-container'; document.body.appendChild(container); }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
   container.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-10px)'; setTimeout(() => toast.remove(), 300); }, 2200);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-10px)'; setTimeout(() => toast.remove(), 300); }, duration);
 }
 
 window.openModal = openModal;
@@ -938,3 +939,43 @@ window.closeModal = closeModal;
 window.showToast = showToast;
 window.toggleTheme = toggleTheme;
 window.updateMemberUI = updateMemberUI;
+
+/* ============================================================
+   PWA 安装引导
+   ============================================================ */
+function initPWAInstall() {
+  const btn = document.getElementById('pwa-install-btn');
+  if (!btn) return;
+
+  // 检查是否已安装为 PWA
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator.standalone === true);
+  if (isStandalone) return; // 已安装，隐藏按钮
+
+  // 监听 beforeinstallprompt（Android Chrome）
+  window.addEventListener('pwa-install-available', () => {
+    btn.classList.remove('hidden');
+  });
+
+  // iOS 检测：显示引导
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    btn.classList.remove('hidden');
+  }
+
+  btn.addEventListener('click', async () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      // iOS 引导
+      showToast('请点击 Safari 分享按钮 → "添加到主屏幕"', 'info', 4000);
+      return;
+    }
+    // Android: 调用安装提示
+    if (window.promptInstall) {
+      const ok = await window.promptInstall();
+      if (!ok) showToast('请在浏览器菜单中选择"添加到主屏幕"', 'info', 4000);
+    } else {
+      showToast('请在浏览器菜单中选择"添加到主屏幕"', 'info', 4000);
+    }
+  });
+}

@@ -20,6 +20,9 @@ Thumbs.db
 # Local Netlify folder
 .netlify
 
+# 图标生成脚本
+gen-icons.js
+
 # Electron 构建产物
 dist/
 
